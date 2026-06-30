@@ -1,6 +1,7 @@
 package dev.macfi.luftung.domain
 
 import kotlin.math.ln
+import kotlin.math.exp
 
 object DewPointCalculator {
     private const val A = 17.27
@@ -14,6 +15,22 @@ object DewPointCalculator {
         val alpha = (A * temperatureC) / (B + temperatureC) +
             ln(relativeHumidityPercent / 100.0)
         return (B * alpha) / (A - alpha)
+    }
+
+    fun calculateRelativeHumidity(
+        temperatureC: Double,
+        dewPointC: Double,
+    ): Double {
+        require(temperatureC in -50.0..80.0) {
+            "Temperature must be between -50 and 80 C."
+        }
+        require(dewPointC <= temperatureC) {
+            "Dew point cannot be above temperature."
+        }
+        val saturationAtDewPoint = exp((A * dewPointC) / (B + dewPointC))
+        val saturationAtTemperature = exp((A * temperatureC) / (B + temperatureC))
+        return (100.0 * saturationAtDewPoint / saturationAtTemperature)
+            .coerceIn(0.0, 100.0)
     }
 
     fun validate(

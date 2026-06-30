@@ -11,14 +11,18 @@ class WidgetStateStore(context: Context) {
 
     fun read(): WidgetDisplayState {
         val title = prefs.getString(KEY_TITLE, null) ?: return WidgetDisplayState.initial()
-        val recommendation = prefs.getString(KEY_RECOMMENDATION, null)?.let { Recommendation.valueOf(it) }
+        val recommendation = parseRecommendationOrNull(prefs.getString(KEY_RECOMMENDATION, null))
+        val status = parseStatusOrNull(prefs.getString(KEY_STATUS, WidgetStatus.ERROR.name))
+            ?: return WidgetDisplayState.initial()
         return WidgetDisplayState(
-            status = WidgetStatus.valueOf(prefs.getString(KEY_STATUS, WidgetStatus.ERROR.name)!!),
+            status = status,
             recommendation = recommendation,
             title = title,
             indoorLine = prefs.getString(KEY_INDOOR_LINE, "") ?: "",
             outdoorLine = prefs.getString(KEY_OUTDOOR_LINE, "") ?: "",
             reason = prefs.getString(KEY_REASON, "") ?: "",
+            detailedReason = prefs.getString(KEY_DETAILED_REASON, null)
+                ?: prefs.getString(KEY_REASON, "") ?: "",
             lastUpdated = prefs.getString(KEY_LAST_UPDATED, "Never") ?: "Never",
             stale = prefs.getBoolean(KEY_STALE, false),
         )
@@ -32,19 +36,33 @@ class WidgetStateStore(context: Context) {
             .putString(KEY_INDOOR_LINE, state.indoorLine)
             .putString(KEY_OUTDOOR_LINE, state.outdoorLine)
             .putString(KEY_REASON, state.reason)
+            .putString(KEY_DETAILED_REASON, state.detailedReason)
             .putString(KEY_LAST_UPDATED, state.lastUpdated)
             .putBoolean(KEY_STALE, state.stale)
             .apply()
     }
 
-    private companion object {
-        const val KEY_STATUS = "status"
-        const val KEY_RECOMMENDATION = "recommendation"
-        const val KEY_TITLE = "title"
-        const val KEY_INDOOR_LINE = "indoor_line"
-        const val KEY_OUTDOOR_LINE = "outdoor_line"
-        const val KEY_REASON = "reason"
-        const val KEY_LAST_UPDATED = "last_updated"
-        const val KEY_STALE = "stale"
+    companion object {
+        private const val KEY_STATUS = "status"
+        private const val KEY_RECOMMENDATION = "recommendation"
+        private const val KEY_TITLE = "title"
+        private const val KEY_INDOOR_LINE = "indoor_line"
+        private const val KEY_OUTDOOR_LINE = "outdoor_line"
+        private const val KEY_REASON = "reason"
+        private const val KEY_DETAILED_REASON = "detailed_reason"
+        private const val KEY_LAST_UPDATED = "last_updated"
+        private const val KEY_STALE = "stale"
+
+        fun parseRecommendationOrNull(stored: String?): Recommendation? {
+            return stored?.let { value ->
+                runCatching { Recommendation.valueOf(value) }.getOrNull()
+            }
+        }
+
+        fun parseStatusOrNull(stored: String?): WidgetStatus? {
+            return stored?.let { value ->
+                runCatching { WidgetStatus.valueOf(value) }.getOrNull()
+            }
+        }
     }
 }

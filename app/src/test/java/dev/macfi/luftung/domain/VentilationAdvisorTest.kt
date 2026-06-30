@@ -140,6 +140,6 @@ class VentilationAdvisorTest {
         assertEquals(22.8, advice.predictedTemp, 0.2)
         assertEquals(Recommendation.OPEN_WINDOWS, advice.recommendation)
         assertTrue(advice.currentScore > advice.predictedScore)
-        assertTrue(advice.explanation.startsWith("Open windows"))
+        assertTrue(advice.explanation.contains("Expected after"))
     }
 }

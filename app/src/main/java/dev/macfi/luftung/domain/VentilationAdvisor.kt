@@ -25,7 +25,7 @@ class VentilationAdvisor {
 
         val candidates = candidatesFor(windowState, indoor, outdoor, indoorDewPoint, comfortProfile)
         val best = candidates.minBy { it.score }
-        val currentCandidate = VentilationCandidate(
+        val noActionCandidate = VentilationCandidate(
             recommendation = if (windowState == WindowState.CLOSED) {
                 Recommendation.KEEP_CLOSED
             } else {
@@ -35,12 +35,34 @@ class VentilationAdvisor {
             prediction = PredictedConditions(indoor.temperatureC, indoorDewPoint),
             score = currentScore,
         )
+        val currentCandidate = if (windowState == WindowState.CLOSED && best.score >= currentScore) {
+            noActionCandidate.copy(
+                prediction = best.prediction,
+                score = best.score,
+            )
+        } else {
+            noActionCandidate
+        }
 
         val selected = when {
             staleAir && best.score >= currentScore -> candidates.first { it.minutes == 5 }
             best.score < currentScore -> best
             else -> currentCandidate
         }
+        val predictedRelativeHumidityPercent = DewPointCalculator.calculateRelativeHumidity(
+            temperatureC = selected.prediction.temperatureC,
+            dewPointC = selected.prediction.dewPointC,
+        )
+        val explanation = VentilationExplanationBuilder.build(
+            candidate = selected,
+            indoor = indoor,
+            outdoor = outdoor,
+            indoorDewPoint = indoorDewPoint,
+            outdoorDewPoint = outdoorDewPoint,
+            predictedRelativeHumidityPercent = predictedRelativeHumidityPercent,
+            currentScore = currentScore,
+            staleAir = staleAir && best.score >= currentScore,
+        )
 
         return VentilationAdvice(
             recommendation = selected.recommendation,
@@ -51,16 +73,15 @@ class VentilationAdvisor {
             outdoorDewPoint = outdoorDewPoint,
             predictedTemp = selected.prediction.temperatureC,
             predictedDewPoint = selected.prediction.dewPointC,
+            predictedRelativeHumidityPercent = predictedRelativeHumidityPercent,
             currentScore = currentScore,
             predictedScore = selected.score,
-            explanation = buildExplanation(
-                candidate = selected,
-                indoor = indoor,
-                outdoor = outdoor,
-                indoorDewPoint = indoorDewPoint,
-                outdoorDewPoint = outdoorDewPoint,
-                staleAir = staleAir && best.score >= currentScore,
-            ),
+            temperatureDelta = explanation.temperatureDelta,
+            dewPointDelta = explanation.dewPointDelta,
+            scoreDelta = explanation.scoreDelta,
+            shortReason = explanation.shortReason,
+            detailedReason = explanation.detailedReason,
+            explanation = explanation.detailedReason,
         )
     }
 
@@ -144,24 +165,6 @@ class VentilationAdvisor {
             outdoorDewPoint > indoorDewPoint + 3.0
     }
 
-    private fun buildExplanation(
-        candidate: VentilationCandidate,
-        indoor: IndoorConditions,
-        outdoor: OutdoorConditions,
-        indoorDewPoint: Double,
-        outdoorDewPoint: Double,
-        staleAir: Boolean,
-    ): String {
-        if (staleAir) {
-            return "Open windows for ${candidate.minutes} minutes. Some fresh air is useful after several closed hours, and outdoor conditions are not extremely unfavorable."
-        }
-
-        val warmerCooler = if (outdoor.temperatureC >= indoor.temperatureC) "warmer" else "cooler"
-        val drierWetter = if (outdoorDewPoint <= indoorDewPoint) "drier" else "more humid"
-        val duration = if (candidate.minutes > 0) " for ${candidate.minutes} minutes" else ""
-        return "${candidate.recommendation.label}$duration. Outdoor air is ${kotlin.math.abs(outdoor.temperatureC - indoor.temperatureC).oneDecimal()} C $warmerCooler and ${kotlin.math.abs(outdoorDewPoint - indoorDewPoint).oneDecimal()} C $drierWetter by dew point. Predicted result: ${candidate.prediction.temperatureC.oneDecimal()} C, dew point ${candidate.prediction.dewPointC.oneDecimal()} C."
-    }
-
     private companion object {
         val CANDIDATE_MINUTES = listOf(5, 10, 15, 30, 60)
         const val STALE_AIR_MILLIS = 3 * 60 * 60 * 1000L
@@ -177,8 +180,14 @@ data class VentilationAdvice(
     val outdoorDewPoint: Double,
     val predictedTemp: Double,
     val predictedDewPoint: Double,
+    val predictedRelativeHumidityPercent: Double,
     val currentScore: Double,
     val predictedScore: Double,
+    val temperatureDelta: Double,
+    val dewPointDelta: Double,
+    val scoreDelta: Double,
+    val shortReason: String,
+    val detailedReason: String,
     val explanation: String,
 )
 

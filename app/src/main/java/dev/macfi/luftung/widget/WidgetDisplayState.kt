@@ -9,6 +9,7 @@ data class WidgetDisplayState(
     val indoorLine: String,
     val outdoorLine: String,
     val reason: String,
+    val detailedReason: String,
     val lastUpdated: String,
     val stale: Boolean,
 ) {
@@ -32,6 +33,7 @@ fun WidgetDisplayState.Companion.initial(): WidgetDisplayState {
         indoorLine = "Indoor: missing",
         outdoorLine = "Outdoor: missing",
         reason = "Open Luftung and enter the room conditions.",
+        detailedReason = "Open Luftung and enter the room conditions.",
         lastUpdated = "Never",
         stale = false,
     )

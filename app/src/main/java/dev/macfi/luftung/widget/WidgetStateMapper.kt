@@ -21,12 +21,17 @@ object WidgetStateMapper {
             status = advice.status(),
             recommendation = advice.recommendation,
             title = advice.titleText(),
-            indoorLine = "Indoor: ${indoor.temperatureC.oneDecimal()} C / ${indoor.relativeHumidityPercent.oneDecimal()}% / DP ${advice.currentIndoorDewPoint.oneDecimal()} C",
-            outdoorLine = "Outdoor: ${outdoor.temperatureC.oneDecimal()} C / ${outdoor.relativeHumidityPercent.oneDecimal()}% / DP ${outdoor.dewPointC.oneDecimal()} C${outdoor.locationSuffix()}",
+            indoorLine = "🏠 ${indoor.temperatureC.oneDecimal()} C / 🌫 ${advice.currentIndoorDewPoint.oneDecimal()} C -> ${advice.predictedTemp.oneDecimal()} C / 🌫 ${advice.predictedDewPoint.oneDecimal()} C",
+            outdoorLine = "🌳 ${outdoor.temperatureC.oneDecimal()} C / 💧 ${outdoor.relativeHumidityPercent.oneDecimal()}% / 🌫 ${outdoor.dewPointC.oneDecimal()} C${outdoor.locationSuffix()}",
             reason = when {
                 stale -> "Outdoor data stale - tap to refresh."
-                warning != null -> "$warning ${advice.shortReason()}"
-                else -> advice.shortReason()
+                warning != null -> "$warning ${advice.shortReason}"
+                else -> advice.shortReason
+            },
+            detailedReason = when {
+                stale -> "Outdoor data is stale. Tap to refresh before trusting the recommendation."
+                warning != null -> "$warning ${advice.detailedReason}"
+                else -> advice.detailedReason
             },
             lastUpdated = formatTime(outdoor.updatedAtMillis),
             stale = stale,
@@ -41,6 +46,7 @@ object WidgetStateMapper {
             indoorLine = "Indoor: unavailable",
             outdoorLine = "Outdoor: unavailable",
             reason = reason,
+            detailedReason = reason,
             lastUpdated = "Never",
             stale = false,
         )
@@ -58,16 +64,17 @@ object WidgetStateMapper {
     }
 
     private fun VentilationAdvice.titleText(): String {
-        return if (recommendedMinutes > 0) {
-            "${recommendation.label} ${recommendedMinutes} min"
-        } else {
-            recommendation.label
+        val prefix = when (recommendation) {
+            Recommendation.OPEN_WINDOWS,
+            Recommendation.KEEP_WINDOWS_OPEN -> "🪟 "
+            Recommendation.CLOSE_WINDOWS_NOW,
+            Recommendation.KEEP_CLOSED -> "🔒 "
         }
-    }
-
-    private fun VentilationAdvice.shortReason(): String {
-        val improvement = currentScore - predictedScore
-        return "Comfort score ${if (improvement >= 0) "improves" else "worsens"} by ${kotlin.math.abs(improvement).oneDecimal()}."
+        return if (recommendedMinutes > 0) {
+            "$prefix${recommendation.label} ${recommendedMinutes} min"
+        } else {
+            "$prefix${recommendation.label}"
+        }
     }
 
     private fun formatTime(millis: Long): String {

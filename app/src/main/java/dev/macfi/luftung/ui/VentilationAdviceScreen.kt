@@ -458,10 +458,11 @@ private fun RecommendationCard(state: WidgetDisplayState) {
             style = MaterialTheme.typography.titleLarge,
             color = Color(0xFF12372A),
         )
+        Text(text = "Now -> expected", color = Color(0xFF48685C))
         Text(text = state.indoorLine, color = Color(0xFF274D40))
         Text(text = state.outdoorLine, color = Color(0xFF274D40))
         HorizontalDivider()
-        Text(text = state.reason, color = Color(0xFF274D40))
+        Text(text = state.detailedReason, color = Color(0xFF274D40))
         Text(text = "Updated: ${state.lastUpdated}", color = Color(0xFF48685C))
     }
 }
