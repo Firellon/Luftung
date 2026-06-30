@@ -38,11 +38,11 @@ class RefreshCoordinator(
                 ),
             )
 
-        val mode = preferencesStore.readMode()
         val advice = advisor.assess(
             indoor = indoor,
             outdoor = outdoorResult.conditions,
-            mode = mode,
+            windowState = preferencesStore.readWindowState(),
+            comfortProfile = preferencesStore.readComfortProfile(),
             lastVentilatedAtMillis = preferencesStore.readLastVentilatedAtMillis(),
             nowMillis = System.currentTimeMillis(),
         )

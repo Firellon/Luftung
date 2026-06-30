@@ -5,13 +5,29 @@ object ComfortScorer {
         temperatureC: Double,
         dewPointC: Double,
     ): Double {
+        return score(
+            temperatureC = temperatureC,
+            dewPointC = dewPointC,
+            profile = ComfortProfile.balanced(),
+        )
+    }
+
+    fun score(
+        temperatureC: Double,
+        dewPointC: Double,
+        profile: ComfortProfile,
+    ): Double {
         val tempPenalty = temperaturePenalty(temperatureC)
         val dewPointPenalty = dewPointPenalty(dewPointC)
-        return when {
-            temperatureC < 26.0 -> tempPenalty + 1.3 * dewPointPenalty
-            temperatureC < 32.0 -> 1.2 * tempPenalty + 1.2 * dewPointPenalty
-            else -> 1.8 * tempPenalty + 1.5 * dewPointPenalty
+        val weightedScore = when {
+            temperatureC < 26.0 -> profile.temperaturePriority * tempPenalty +
+                1.3 * profile.dewPointPriority * dewPointPenalty
+            temperatureC < 32.0 -> 1.2 * profile.temperaturePriority * tempPenalty +
+                1.2 * profile.dewPointPriority * dewPointPenalty
+            else -> 1.8 * profile.temperaturePriority * tempPenalty +
+                1.5 * profile.dewPointPriority * dewPointPenalty
         }
+        return profile.comfortStrictness * weightedScore
     }
 
     fun temperaturePenalty(temperatureC: Double): Double {

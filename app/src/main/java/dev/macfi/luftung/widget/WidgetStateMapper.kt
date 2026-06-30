@@ -20,7 +20,7 @@ object WidgetStateMapper {
         return WidgetDisplayState(
             status = advice.status(),
             recommendation = advice.recommendation,
-            title = advice.recommendation.label,
+            title = advice.titleText(),
             indoorLine = "Indoor: ${indoor.temperatureC.oneDecimal()} C / ${indoor.relativeHumidityPercent.oneDecimal()}% / DP ${advice.currentIndoorDewPoint.oneDecimal()} C",
             outdoorLine = "Outdoor: ${outdoor.temperatureC.oneDecimal()} C / ${outdoor.relativeHumidityPercent.oneDecimal()}% / DP ${outdoor.dewPointC.oneDecimal()} C${outdoor.locationSuffix()}",
             reason = when {
@@ -48,12 +48,20 @@ object WidgetStateMapper {
 
     private fun VentilationAdvice.status(): WidgetStatus {
         return when (recommendation) {
-            Recommendation.STRONGLY_VENTILATE,
-            Recommendation.VENTILATE -> WidgetStatus.HELPFUL
-            Recommendation.VENTILATE_BRIEFLY -> {
-                if (predictedDewPoint < 5.0 || predictedTemp < 18.0) WidgetStatus.COLD_OR_DRY else WidgetStatus.MIXED
+            Recommendation.OPEN_WINDOWS,
+            Recommendation.KEEP_WINDOWS_OPEN -> {
+                if (predictedDewPoint < 5.0 || predictedTemp < 18.0) WidgetStatus.COLD_OR_DRY else WidgetStatus.HELPFUL
             }
+            Recommendation.CLOSE_WINDOWS_NOW,
             Recommendation.KEEP_CLOSED -> WidgetStatus.NOT_HELPFUL
+        }
+    }
+
+    private fun VentilationAdvice.titleText(): String {
+        return if (recommendedMinutes > 0) {
+            "${recommendation.label} ${recommendedMinutes} min"
+        } else {
+            recommendation.label
         }
     }
 

@@ -30,9 +30,9 @@ class VentilationAdvisorTest {
     }
 
     @Test
-    fun simplifiedActionsMapToDistinctMixFactors() {
-        assertEquals(0.15, VentilationMode.BRIEF_AIRING.mixFactor, 0.001)
-        assertEquals(0.80, VentilationMode.FULL_AIRING.mixFactor, 0.001)
+    fun windowStatesMapToDistinctAirExchangeRates() {
+        assertEquals(0.0, WindowState.CLOSED.airChangesPerHour, 0.001)
+        assertTrue(WindowState.CROSS_VENTILATION.airChangesPerHour > WindowState.OPEN.airChangesPerHour)
     }
 
     @Test
@@ -50,19 +50,15 @@ class VentilationAdvisorTest {
     }
 
     @Test
-    fun recommendationThresholdsUsePredictedComfortImprovement() {
+    fun scoreRecommendationKeepsClosedWhenPredictedComfortDoesNotImprove() {
         val advisor = VentilationAdvisor()
 
         assertEquals(
-            Recommendation.STRONGLY_VENTILATE,
+            Recommendation.OPEN_WINDOWS,
             advisor.recommendForScores(currentScore = 10.0, predictedScore = 6.9),
         )
         assertEquals(
-            Recommendation.VENTILATE,
-            advisor.recommendForScores(currentScore = 10.0, predictedScore = 9.0),
-        )
-        assertEquals(
-            Recommendation.VENTILATE_BRIEFLY,
+            Recommendation.OPEN_WINDOWS,
             advisor.recommendForScores(currentScore = 10.0, predictedScore = 9.8),
         )
         assertEquals(
@@ -87,13 +83,15 @@ class VentilationAdvisorTest {
                 locationLabel = null,
                 updatedAtMillis = 3_600_000L,
             ),
-            mode = VentilationMode.BRIEF_AIRING,
+            windowState = WindowState.CLOSED,
+            comfortProfile = ComfortProfile.balanced(),
             lastVentilatedAtMillis = 0L,
             nowMillis = 4 * 3_600_000L,
         )
 
-        assertEquals(Recommendation.VENTILATE_BRIEFLY, advice.recommendation)
-        assertTrue(advice.explanation.contains("closed for more than 3 hours"))
+        assertEquals(Recommendation.OPEN_WINDOWS, advice.recommendation)
+        assertEquals(5, advice.recommendedMinutes)
+        assertTrue(advice.explanation.contains("fresh air"))
     }
 
     @Test
@@ -108,13 +106,14 @@ class VentilationAdvisorTest {
                 locationLabel = null,
                 updatedAtMillis = 3_600_000L,
             ),
-            mode = VentilationMode.FULL_AIRING,
+            windowState = WindowState.CLOSED,
+            comfortProfile = ComfortProfile.balanced(),
             lastVentilatedAtMillis = 0L,
             nowMillis = 4 * 3_600_000L,
         )
 
         assertEquals(
-            "recommendation for hot humid outdoor full airing",
+            "recommendation for hot humid outdoor air",
             Recommendation.KEEP_CLOSED,
             advice.recommendation,
         )
@@ -132,14 +131,15 @@ class VentilationAdvisorTest {
                 locationLabel = null,
                 updatedAtMillis = 0L,
             ),
-            mode = VentilationMode.FULL_AIRING,
+            windowState = WindowState.CLOSED,
+            comfortProfile = ComfortProfile.balanced(),
             lastVentilatedAtMillis = null,
             nowMillis = 0L,
         )
 
-        assertEquals(23.2, advice.predictedTemp, 0.1)
-        assertEquals(Recommendation.STRONGLY_VENTILATE, advice.recommendation)
+        assertEquals(22.8, advice.predictedTemp, 0.2)
+        assertEquals(Recommendation.OPEN_WINDOWS, advice.recommendation)
         assertTrue(advice.currentScore > advice.predictedScore)
-        assertTrue(advice.explanation.startsWith("Strongly ventilate."))
+        assertTrue(advice.explanation.startsWith("Open windows"))
     }
 }

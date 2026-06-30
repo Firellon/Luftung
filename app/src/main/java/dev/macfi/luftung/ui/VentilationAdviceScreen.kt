@@ -15,11 +15,15 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -35,9 +39,11 @@ import dev.macfi.luftung.data.OutdoorConditionsStore
 import dev.macfi.luftung.data.OutdoorInputMode
 import dev.macfi.luftung.data.VentilationPreferencesStore
 import dev.macfi.luftung.domain.CitySearchResult
+import dev.macfi.luftung.domain.ComfortProfile
+import dev.macfi.luftung.domain.ComfortProfilePreset
 import dev.macfi.luftung.domain.DewPointCalculator
 import dev.macfi.luftung.domain.IndoorConditions
-import dev.macfi.luftung.domain.VentilationMode
+import dev.macfi.luftung.domain.WindowState
 import dev.macfi.luftung.domain.oneDecimal
 import dev.macfi.luftung.refresh.RefreshCoordinator
 import dev.macfi.luftung.widget.WidgetDisplayState
@@ -56,12 +62,14 @@ fun VentilationAdviceScreen(
     val weatherProvider = remember { ObservedWeatherProvider() }
     val scope = rememberCoroutineScope()
 
+    var selectedTab by remember { mutableIntStateOf(0) }
     var indoorTempText by remember { mutableStateOf("") }
     var indoorHumidityText by remember { mutableStateOf("") }
     var outdoorTempText by remember { mutableStateOf("") }
     var outdoorHumidityText by remember { mutableStateOf("") }
     var outdoorMode by remember { mutableStateOf(outdoorStore.readMode()) }
-    var ventilationMode by remember { mutableStateOf(preferencesStore.readMode()) }
+    var windowState by remember { mutableStateOf(preferencesStore.readWindowState()) }
+    var comfortProfile by remember { mutableStateOf(preferencesStore.readComfortProfile()) }
     var cityQuery by remember { mutableStateOf("") }
     var cityResults by remember { mutableStateOf(emptyList<CitySearchResult>()) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -102,62 +110,66 @@ fun VentilationAdviceScreen(
                 color = Color(0xFF274D40),
             )
 
-            IndoorConditionsCard(
-                temperatureText = indoorTempText,
-                humidityText = indoorHumidityText,
-                onTemperatureChange = { indoorTempText = it },
-                onHumidityChange = { indoorHumidityText = it },
-            )
+            PrimaryTabRow(selectedTabIndex = selectedTab) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("Advice") },
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("Settings") },
+                )
+            }
 
-            VentilationModeCard(
-                selected = ventilationMode,
-                onSelected = {
-                    ventilationMode = it
-                    preferencesStore.saveMode(it)
-                },
-            )
-
-            OutdoorConditionsCard(
-                mode = outdoorMode,
-                onModeChange = {
-                    outdoorMode = it
-                    outdoorStore.saveMode(it)
-                },
-                outdoorTempText = outdoorTempText,
-                outdoorHumidityText = outdoorHumidityText,
-                onOutdoorTempChange = { outdoorTempText = it },
-                onOutdoorHumidityChange = { outdoorHumidityText = it },
-                cityQuery = cityQuery,
-                onCityQueryChange = { cityQuery = it },
-                cityResults = cityResults,
-                requestLocationPermission = requestLocationPermission,
-                onSearchCity = {
-                    scope.launch {
-                        cityResults = weatherProvider.searchCities(cityQuery)
-                        message = if (cityResults.isEmpty()) "No city suggestions found." else null
-                    }
-                },
-                onSelectCity = { city ->
-                    outdoorStore.saveSelectedCity(
-                        name = city.name,
-                        countryCode = city.countryCode,
-                        latitude = city.latitude,
-                        longitude = city.longitude,
-                    )
-                    outdoorStore.saveMode(OutdoorInputMode.CITY_SEARCH)
-                    outdoorMode = OutdoorInputMode.CITY_SEARCH
-                    cityQuery = city.displayName
-                    cityResults = emptyList()
-                },
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = {
+            if (selectedTab == 0) {
+                AdviceTab(
+                    indoorTempText = indoorTempText,
+                    indoorHumidityText = indoorHumidityText,
+                    onIndoorTempChange = { indoorTempText = it },
+                    onIndoorHumidityChange = { indoorHumidityText = it },
+                    windowState = windowState,
+                    onWindowStateChange = {
+                        windowState = it
+                        preferencesStore.saveWindowState(it)
+                    },
+                    outdoorMode = outdoorMode,
+                    onOutdoorModeChange = {
+                        outdoorMode = it
+                        outdoorStore.saveMode(it)
+                    },
+                    outdoorTempText = outdoorTempText,
+                    outdoorHumidityText = outdoorHumidityText,
+                    onOutdoorTempChange = { outdoorTempText = it },
+                    onOutdoorHumidityChange = { outdoorHumidityText = it },
+                    cityQuery = cityQuery,
+                    onCityQueryChange = { cityQuery = it },
+                    cityResults = cityResults,
+                    requestLocationPermission = requestLocationPermission,
+                    onSearchCity = {
+                        scope.launch {
+                            cityResults = weatherProvider.searchCities(cityQuery)
+                            message = if (cityResults.isEmpty()) "No city suggestions found." else null
+                        }
+                    },
+                    onSelectCity = { city ->
+                        outdoorStore.saveSelectedCity(
+                            name = city.name,
+                            countryCode = city.countryCode,
+                            latitude = city.latitude,
+                            longitude = city.longitude,
+                        )
+                        outdoorStore.saveMode(OutdoorInputMode.CITY_SEARCH)
+                        outdoorMode = OutdoorInputMode.CITY_SEARCH
+                        cityQuery = city.displayName
+                        cityResults = emptyList()
+                    },
+                    onSaveAndRefresh = {
                         val indoor = parseIndoor(indoorTempText, indoorHumidityText)
                         if (indoor == null) {
                             message = "Enter valid indoor temperature and humidity."
-                            return@Button
+                            return@AdviceTab
                         }
                         indoorStore.save(indoor)
 
@@ -165,7 +177,7 @@ fun VentilationAdviceScreen(
                             val manualOutdoor = parseOutdoorManual(outdoorTempText, outdoorHumidityText)
                             if (manualOutdoor == null) {
                                 message = "Enter valid manual outdoor temperature and humidity."
-                                return@Button
+                                return@AdviceTab
                             }
                             outdoorStore.saveManual(
                                 temperatureC = manualOutdoor.first,
@@ -173,31 +185,169 @@ fun VentilationAdviceScreen(
                             )
                         }
 
+                        preferencesStore.saveWindowState(windowState)
+                        preferencesStore.saveComfortProfile(comfortProfile)
                         scope.launch {
                             state = RefreshCoordinator(context).refresh(force = true)
                             message = "Updated recommendation."
                         }
                     },
-                ) {
-                    Text("Save and refresh")
-                }
-
-                OutlinedButton(
-                    onClick = {
+                    onOpenedNow = {
                         preferencesStore.markVentilated()
+                        windowState = WindowState.OPEN
                         message = "Marked windows as opened now."
                     },
-                ) {
-                    Text("Opened now")
-                }
+                    message = message,
+                    state = state,
+                )
+            } else {
+                SettingsTab(
+                    comfortProfile = comfortProfile,
+                    onPresetSelected = { preset ->
+                        comfortProfile = preset.defaultProfile()
+                        preferencesStore.saveComfortProfile(comfortProfile)
+                    },
+                    onProfileChanged = {
+                        comfortProfile = it
+                        preferencesStore.saveComfortProfile(it)
+                    },
+                )
             }
-
-            message?.let {
-                Text(text = it, color = Color(0xFF274D40))
-            }
-
-            RecommendationCard(state)
         }
+    }
+}
+
+@Composable
+private fun AdviceTab(
+    indoorTempText: String,
+    indoorHumidityText: String,
+    onIndoorTempChange: (String) -> Unit,
+    onIndoorHumidityChange: (String) -> Unit,
+    windowState: WindowState,
+    onWindowStateChange: (WindowState) -> Unit,
+    outdoorMode: OutdoorInputMode,
+    onOutdoorModeChange: (OutdoorInputMode) -> Unit,
+    outdoorTempText: String,
+    outdoorHumidityText: String,
+    onOutdoorTempChange: (String) -> Unit,
+    onOutdoorHumidityChange: (String) -> Unit,
+    cityQuery: String,
+    onCityQueryChange: (String) -> Unit,
+    cityResults: List<CitySearchResult>,
+    requestLocationPermission: () -> Unit,
+    onSearchCity: () -> Unit,
+    onSelectCity: (CitySearchResult) -> Unit,
+    onSaveAndRefresh: () -> Unit,
+    onOpenedNow: () -> Unit,
+    message: String?,
+    state: WidgetDisplayState,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        IndoorConditionsCard(
+            temperatureText = indoorTempText,
+            humidityText = indoorHumidityText,
+            onTemperatureChange = onIndoorTempChange,
+            onHumidityChange = onIndoorHumidityChange,
+        )
+
+        WindowStateCard(
+            selected = windowState,
+            onSelected = onWindowStateChange,
+        )
+
+        OutdoorConditionsCard(
+            mode = outdoorMode,
+            onModeChange = onOutdoorModeChange,
+            outdoorTempText = outdoorTempText,
+            outdoorHumidityText = outdoorHumidityText,
+            onOutdoorTempChange = onOutdoorTempChange,
+            onOutdoorHumidityChange = onOutdoorHumidityChange,
+            cityQuery = cityQuery,
+            onCityQueryChange = onCityQueryChange,
+            cityResults = cityResults,
+            requestLocationPermission = requestLocationPermission,
+            onSearchCity = onSearchCity,
+            onSelectCity = onSelectCity,
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = onSaveAndRefresh) {
+                Text("Save and refresh")
+            }
+
+            OutlinedButton(onClick = onOpenedNow) {
+                Text("Opened now")
+            }
+        }
+
+        message?.let {
+            Text(text = it, color = Color(0xFF274D40))
+        }
+
+        RecommendationCard(state)
+    }
+}
+
+@Composable
+private fun SettingsTab(
+    comfortProfile: ComfortProfile,
+    onPresetSelected: (ComfortProfilePreset) -> Unit,
+    onProfileChanged: (ComfortProfile) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("Comfort Priorities", style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = "Relative humidity is shown because it is familiar, but the comfort model scores humidity through dew point.",
+            color = Color(0xFF48685C),
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ComfortProfilePreset.entries.forEach { preset ->
+                ModeButton(
+                    label = preset.label,
+                    selected = comfortProfile.preset == preset,
+                    onClick = { onPresetSelected(preset) },
+                )
+            }
+        }
+
+        PrioritySlider(
+            label = "Comfort strictness",
+            value = comfortProfile.comfortStrictness,
+            onValueChange = {
+                onProfileChanged(comfortProfile.copy(comfortStrictness = it))
+            },
+        )
+        PrioritySlider(
+            label = "Temperature priority",
+            value = comfortProfile.temperaturePriority,
+            onValueChange = {
+                onProfileChanged(comfortProfile.copy(temperaturePriority = it))
+            },
+        )
+        PrioritySlider(
+            label = "Dew point priority",
+            value = comfortProfile.dewPointPriority,
+            onValueChange = {
+                onProfileChanged(comfortProfile.copy(dewPointPriority = it))
+            },
+        )
+    }
+}
+
+@Composable
+private fun PrioritySlider(
+    label: String,
+    value: Double,
+    onValueChange: (Double) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("$label: ${value.oneDecimal()}x")
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onValueChange(it.toDouble()) },
+            valueRange = 0.5f..1.8f,
+        )
     }
 }
 
@@ -216,27 +366,23 @@ private fun IndoorConditionsCard(
 }
 
 @Composable
-private fun VentilationModeCard(
-    selected: VentilationMode,
-    onSelected: (VentilationMode) -> Unit,
+private fun WindowStateCard(
+    selected: WindowState,
+    onSelected: (WindowState) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Airing Action", style = MaterialTheme.typography.titleMedium)
-        VentilationMode.entries.chunked(2).forEach { rowModes ->
+        Text("Window State", style = MaterialTheme.typography.titleMedium)
+        WindowState.entries.chunked(2).forEach { rowStates ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                rowModes.forEach { mode ->
+                rowStates.forEach { state ->
                     ModeButton(
-                        label = mode.displayName(),
-                        selected = selected == mode,
-                        onClick = { onSelected(mode) },
+                        label = state.label,
+                        selected = selected == state,
+                        onClick = { onSelected(state) },
                     )
                 }
             }
         }
-        Text(
-            text = "Brief airing is a 5-10 min stale-air check or small positive comfort gain. Full airing assumes a meaningful air exchange and is used for clear improvement.",
-            color = Color(0xFF48685C),
-        )
     }
 }
 
@@ -402,9 +548,10 @@ private fun Double.cleanNumber(): String {
     }
 }
 
-private fun VentilationMode.displayName(): String {
+private fun ComfortProfilePreset.defaultProfile(): ComfortProfile {
     return when (this) {
-        VentilationMode.BRIEF_AIRING -> "Brief airing"
-        VentilationMode.FULL_AIRING -> "Full airing"
+        ComfortProfilePreset.HUMIDITY_SENSITIVE -> ComfortProfile.humiditySensitive()
+        ComfortProfilePreset.BALANCED -> ComfortProfile.balanced()
+        ComfortProfilePreset.COOLING_FOCUSED -> ComfortProfile.coolingFocused()
     }
 }
