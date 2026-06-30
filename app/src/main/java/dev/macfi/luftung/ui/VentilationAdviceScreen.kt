@@ -30,7 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import dev.macfi.luftung.data.IndoorClimateStore
-import dev.macfi.luftung.data.OpenMeteoWeatherProvider
+import dev.macfi.luftung.data.ObservedWeatherProvider
 import dev.macfi.luftung.data.OutdoorConditionsStore
 import dev.macfi.luftung.data.OutdoorInputMode
 import dev.macfi.luftung.data.VentilationPreferencesStore
@@ -53,7 +53,7 @@ fun VentilationAdviceScreen(
     val indoorStore = remember { IndoorClimateStore(context) }
     val outdoorStore = remember { OutdoorConditionsStore(context) }
     val preferencesStore = remember { VentilationPreferencesStore(context) }
-    val weatherProvider = remember { OpenMeteoWeatherProvider() }
+    val weatherProvider = remember { ObservedWeatherProvider() }
     val scope = rememberCoroutineScope()
 
     var indoorTempText by remember { mutableStateOf("") }
@@ -221,18 +221,22 @@ private fun VentilationModeCard(
     onSelected: (VentilationMode) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Ventilation Mode", style = MaterialTheme.typography.titleMedium)
+        Text("Airing Action", style = MaterialTheme.typography.titleMedium)
         VentilationMode.entries.chunked(2).forEach { rowModes ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 rowModes.forEach { mode ->
                     ModeButton(
-                        label = mode.name.lowercase().replace('_', ' '),
+                        label = mode.displayName(),
                         selected = selected == mode,
                         onClick = { onSelected(mode) },
                     )
                 }
             }
         }
+        Text(
+            text = "Brief airing is a 5-10 min stale-air check or small positive comfort gain. Full airing assumes a meaningful air exchange and is used for clear improvement.",
+            color = Color(0xFF48685C),
+        )
     }
 }
 
@@ -395,5 +399,12 @@ private fun Double.cleanNumber(): String {
         toInt().toString()
     } else {
         oneDecimal()
+    }
+}
+
+private fun VentilationMode.displayName(): String {
+    return when (this) {
+        VentilationMode.BRIEF_AIRING -> "Brief airing"
+        VentilationMode.FULL_AIRING -> "Full airing"
     }
 }

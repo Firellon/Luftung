@@ -1,10 +1,8 @@
 package dev.macfi.luftung.domain
 
 enum class VentilationMode(val mixFactor: Double) {
-    TILTED_WINDOW(0.15),
-    ONE_WINDOW(0.35),
-    CROSS_VENTILATION(0.60),
-    STRONG_CROSS_DRAFT(0.80),
+    BRIEF_AIRING(0.15),
+    FULL_AIRING(0.80),
 }
 
 object VentilationPredictor {

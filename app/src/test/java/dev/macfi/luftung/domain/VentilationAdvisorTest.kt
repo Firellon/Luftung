@@ -30,17 +30,23 @@ class VentilationAdvisorTest {
     }
 
     @Test
+    fun simplifiedActionsMapToDistinctMixFactors() {
+        assertEquals(0.15, VentilationMode.BRIEF_AIRING.mixFactor, 0.001)
+        assertEquals(0.80, VentilationMode.FULL_AIRING.mixFactor, 0.001)
+    }
+
+    @Test
     fun predictorInterpolatesTemperatureAndDewPointByVentilationMode() {
         val prediction = VentilationPredictor.predict(
             indoorTempC = 28.0,
             indoorDewPointC = 18.0,
             outdoorTempC = 20.0,
             outdoorDewPointC = 10.0,
-            mode = VentilationMode.CROSS_VENTILATION,
+            mode = VentilationMode.FULL_AIRING,
         )
 
-        assertEquals(23.2, prediction.temperatureC, 0.001)
-        assertEquals(13.2, prediction.dewPointC, 0.001)
+        assertEquals(21.6, prediction.temperatureC, 0.001)
+        assertEquals(11.6, prediction.dewPointC, 0.001)
     }
 
     @Test
@@ -57,11 +63,15 @@ class VentilationAdvisorTest {
         )
         assertEquals(
             Recommendation.VENTILATE_BRIEFLY,
-            advisor.recommendForScores(currentScore = 10.0, predictedScore = 10.9),
+            advisor.recommendForScores(currentScore = 10.0, predictedScore = 9.8),
         )
         assertEquals(
             Recommendation.KEEP_CLOSED,
-            advisor.recommendForScores(currentScore = 10.0, predictedScore = 11.0),
+            advisor.recommendForScores(currentScore = 10.0, predictedScore = 10.0),
+        )
+        assertEquals(
+            Recommendation.KEEP_CLOSED,
+            advisor.recommendForScores(currentScore = 10.0, predictedScore = 10.1),
         )
     }
 
@@ -77,7 +87,7 @@ class VentilationAdvisorTest {
                 locationLabel = null,
                 updatedAtMillis = 3_600_000L,
             ),
-            mode = VentilationMode.STRONG_CROSS_DRAFT,
+            mode = VentilationMode.BRIEF_AIRING,
             lastVentilatedAtMillis = 0L,
             nowMillis = 4 * 3_600_000L,
         )
@@ -98,13 +108,13 @@ class VentilationAdvisorTest {
                 locationLabel = null,
                 updatedAtMillis = 3_600_000L,
             ),
-            mode = VentilationMode.STRONG_CROSS_DRAFT,
+            mode = VentilationMode.FULL_AIRING,
             lastVentilatedAtMillis = 0L,
             nowMillis = 4 * 3_600_000L,
         )
 
         assertEquals(
-            "recommendation for hot humid outdoor strong draft",
+            "recommendation for hot humid outdoor full airing",
             Recommendation.KEEP_CLOSED,
             advice.recommendation,
         )
@@ -122,12 +132,12 @@ class VentilationAdvisorTest {
                 locationLabel = null,
                 updatedAtMillis = 0L,
             ),
-            mode = VentilationMode.ONE_WINDOW,
+            mode = VentilationMode.FULL_AIRING,
             lastVentilatedAtMillis = null,
             nowMillis = 0L,
         )
 
-        assertEquals(25.9, advice.predictedTemp, 0.1)
+        assertEquals(23.2, advice.predictedTemp, 0.1)
         assertEquals(Recommendation.STRONGLY_VENTILATE, advice.recommendation)
         assertTrue(advice.currentScore > advice.predictedScore)
         assertTrue(advice.explanation.startsWith("Strongly ventilate."))

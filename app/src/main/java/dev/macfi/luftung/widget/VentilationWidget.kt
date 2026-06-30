@@ -62,7 +62,7 @@ private fun VentilationWidgetContent(state: WidgetDisplayState) {
                 text = state.title,
                 style = TextStyle(
                     color = ColorProvider(Color(0xFF12372A)),
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                 ),
             )
@@ -70,7 +70,7 @@ private fun VentilationWidgetContent(state: WidgetDisplayState) {
                 text = state.indoorLine,
                 style = TextStyle(
                     color = ColorProvider(Color(0xFF274D40)),
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                 ),
             )
             Text(
@@ -84,13 +84,6 @@ private fun VentilationWidgetContent(state: WidgetDisplayState) {
                 text = state.reason,
                 style = TextStyle(
                     color = ColorProvider(Color(0xFF274D40)),
-                    fontSize = 12.sp,
-                ),
-            )
-            Text(
-                text = "Updated ${state.lastUpdated}",
-                style = TextStyle(
-                    color = ColorProvider(Color(0xFF48685C)),
                     fontSize = 11.sp,
                 ),
             )

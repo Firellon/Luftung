@@ -10,9 +10,10 @@ class VentilationPreferencesStore(context: Context) {
     )
 
     fun readMode(): VentilationMode {
-        return prefs.getString(KEY_MODE, VentilationMode.ONE_WINDOW.name)
-            ?.let { VentilationMode.valueOf(it) }
-            ?: VentilationMode.ONE_WINDOW
+        val stored = prefs.getString(KEY_MODE, VentilationMode.FULL_AIRING.name)
+        return runCatching { stored?.let { VentilationMode.valueOf(it) } }
+            .getOrNull()
+            ?: VentilationMode.FULL_AIRING
     }
 
     fun saveMode(mode: VentilationMode) {

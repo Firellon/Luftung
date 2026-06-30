@@ -11,7 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
-class OpenMeteoWeatherProvider : WeatherProvider {
+open class OpenMeteoWeatherProvider : WeatherProvider {
     override suspend fun getCurrentWeather(
         latitude: Double,
         longitude: Double,
@@ -40,7 +40,7 @@ class OpenMeteoWeatherProvider : WeatherProvider {
         )
     }
 
-    suspend fun getCurrentWeatherForCity(city: OutdoorConditionsSource.City): OutdoorConditions {
+    open suspend fun getCurrentWeatherForCity(city: OutdoorConditionsSource.City): OutdoorConditions {
         val conditions = getCurrentWeather(city.latitude, city.longitude)
         return conditions.copy(
             source = city,

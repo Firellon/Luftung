@@ -2,7 +2,7 @@ package dev.macfi.luftung.refresh
 
 import android.content.Context
 import dev.macfi.luftung.data.IndoorClimateStore
-import dev.macfi.luftung.data.OpenMeteoWeatherProvider
+import dev.macfi.luftung.data.ObservedWeatherProvider
 import dev.macfi.luftung.data.OutdoorConditionsCache
 import dev.macfi.luftung.data.OutdoorConditionsResult
 import dev.macfi.luftung.data.OutdoorConditionsStore
@@ -24,7 +24,7 @@ class RefreshCoordinator(
     private val outdoorStore: OutdoorConditionsStore = OutdoorConditionsStore(context),
     private val preferencesStore: VentilationPreferencesStore = VentilationPreferencesStore(context),
     private val locationProvider: AndroidLocationProvider = AndroidLocationProvider(context),
-    private val weatherProvider: OpenMeteoWeatherProvider = OpenMeteoWeatherProvider(),
+    private val weatherProvider: ObservedWeatherProvider = ObservedWeatherProvider(),
     private val advisor: VentilationAdvisor = VentilationAdvisor(),
     private val widgetStateStore: WidgetStateStore = WidgetStateStore(context),
 ) {

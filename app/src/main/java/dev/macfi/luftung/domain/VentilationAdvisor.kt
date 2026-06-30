@@ -66,7 +66,7 @@ class VentilationAdvisor {
         return when {
             improvement >= 3.0 -> Recommendation.STRONGLY_VENTILATE
             improvement >= 1.0 -> Recommendation.VENTILATE
-            improvement > -1.0 -> Recommendation.VENTILATE_BRIEFLY
+            improvement > 0.0 -> Recommendation.VENTILATE_BRIEFLY
             else -> Recommendation.KEEP_CLOSED
         }
     }
